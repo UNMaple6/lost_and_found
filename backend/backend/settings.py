@@ -133,7 +133,7 @@ REST_FRAMEWORK = {
 
     # 默认权限
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',  # 未登录用户只读，登录用户可写
+        'rest_framework.permissions.AllowAny',  # 未登录用户只读，登录用户可写
     ],
 
     # 分页设置（可选）

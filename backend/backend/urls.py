@@ -1,19 +1,25 @@
-# backend/urls.py
 from django.contrib import admin
-from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
-from rest_framework.authtoken.views import obtain_auth_token
+from django.urls import path, include  # 添加 include
 from items import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/items/', views.ItemViewSet.as_view({
+        'get': 'list',
+        'post': 'create',
+    })),
+    path('api/items/<int:pk>/', views.ItemViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'patch': 'partial_update',
+        'delete': 'destroy',
+    })),
+    path('api/items/<int:pk>/delete/', views.ItemViewSet.as_view({
+        'delete': 'delete_item',
+    })),
+    # 新增注册和登录接口
+    path('api/register/', views.register, name='register'),
+    path('api/login/', views.login, name='login'),
+    # 根路径测试接口
     path('', views.home, name='home'),
-    path('api/', include('items.urls')),  # 所有API路由指向items应用
-    path('api-token-auth/', obtain_auth_token),  # Token 认证路由
-    
 ]
-
-# 开发环境媒体文件访问
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
