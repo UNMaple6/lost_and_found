@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'corsheaders',
 
     # 本地应用
-    'items',
+    
+    'items.apps.ItemsConfig',  # 指定带signals的配置类
 ]
 
 MIDDLEWARE = [
@@ -114,10 +115,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # 收集静态文件的目录（生产环境使用）
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # 开发环境静态文件目录
 
 # Media files (用户上传的文件)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# 确保media目录存在
+if not os.path.exists(MEDIA_ROOT):
+    os.makedirs(MEDIA_ROOT)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -149,4 +155,18 @@ REST_FRAMEWORK = {
 
 # 允许所有域名跨域访问（调试用，生产环境应指定具体域名）
 CORS_ALLOW_ALL_ORIGINS = True
+
+# 文件上传大小限制
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+
+# settings.py
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.163.com'  # 163邮箱的SMTP服务器地址
+EMAIL_PORT = 465  # 163邮箱使用SSL加密，端口为465
+EMAIL_USE_TLS = False  # 163邮箱使用SSL，所以TLS设为False
+EMAIL_USE_SSL = True  # 启用SSL加密
+EMAIL_HOST_USER = '13384183566@163.com'  # 你的163邮箱地址
+EMAIL_HOST_PASSWORD = 'LJc2TtQT2YQvCjxs'  # 不是邮箱密码！是授权密码/客户端专用密码
+DEFAULT_FROM_EMAIL = '13384183566@163.com'  # 默认发件人
 
