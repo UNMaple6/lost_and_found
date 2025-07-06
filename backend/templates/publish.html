@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发布信息 - 校园失物招领</title>
+    <!-- 引入 Quartz Bootstrap 主题 CSS -->
+    <link href="https://bootswatch.com/5/quartz/bootstrap.css" rel="stylesheet">
+    <!-- 引入全局配置文件，确保它在其他脚本之前加载 -->
+    <script src="/static/js/config.js"></script>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">返回首页</a>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <h2 class="mb-4">发布新信息</h2>
+                <form id="publish-form">
+                    <div class="form-group mb-3">
+                        <label class="form-label">信息类型</label>
+                        <div>
+                            <input type="radio" class="btn-check" name="type" id="type-lost" value="LOST" checked>
+                            <label class="btn btn-outline-danger" for="type-lost">我丢了东西 (失物)</label>
+
+                            <input type="radio" class="btn-check" name="type" id="type-found" value="FOUND">
+                            <label class="btn btn-outline-success" for="type-found">我捡到东西 (拾物)</label>
+                        </div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="title" class="form-label">物品名称</label>
+                        <input type="text" class="form-control" id="title" name="title" placeholder="例如：一把雨伞，一个钱包">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="item_class" class="form-label">物品类别</label>
+                        <select class="form-select" id="item_class" name="item_class">
+                            <option value="其他">其他</option>
+                            <option value="电子产品">电子产品</option>
+                            <option value="证件卡片">证件卡片</option>
+                            <option value="学习用品">学习用品</option>
+                            <option value="生活用品">生活用品</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="time" class="form-label">丢失/拾获日期 (可选)</label>
+                        <input type="date" class="form-control" id="time" name="time">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="image" class="form-label">上传图片</label>
+                        <input class="form-control" type="file" id="image" name="image" accept="image/*">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="description" class="form-label">详细描述</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                            placeholder="请详细描述物品特征、丢失/拾获时间等"></textarea>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="location" class="form-label">地点描述</label>
+                        <input type="text" class="form-control" id="location" name="location"
+                            placeholder="例如：图书馆二楼，S1教学楼，风三">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">在地图上选择精确位置</label>
+                        <p class="text-muted small">请在下方地图上点击选择位置。地点描述和地图选点至少提供一项。</p>
+                        <!-- 地图容器 -->
+                        <div id="map-container" style="width: 100%; height: 300px;"></div>
+                    </div>
+                    <!-- 隐藏的经纬度字段 -->
+                    <input type="hidden" id="latitude" name="latitude">
+                    <input type="hidden" id="longitude" name="longitude">
+                    <div class="form-group mb-3">
+                        <label for="contact" class="form-label">联系方式（邮箱）</label>
+                        <input type="text" class="form-control" id="contact" name="contact" placeholder="请留下你的有效的邮箱地址">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">确认发布</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- 引入高德地图API -->
+    <script src="https://webapi.amap.com/maps?v=2.0&key=19be76568a503e269c1f1b781fab2efe"></script>
+    <!-- 引入 jQuery 和 Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            // API_BASE_URL 和 token 检查逻辑保持不变
+            //const API_BASE_URL = 'http://10.122.238.99:8000'; // 确认这是正确的地址
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('请先登录！');
+                window.location.href = 'login.html';
+                return;
+            }
+            // --- 地图初始化 ---
+            const map = new AMap.Map('map-container', {
+                zoom: 17,                         // 缩放级别
+                center: [116.291058, 40.158695]    // 初始中心点bupt
+            });
+
+            let marker = null; // 用于存储标记点
+
+            // 监听地图点击事件
+            map.on('click', function (e) {
+                const lng = e.lnglat.getLng();
+                const lat = e.lnglat.getLat();
+
+                // 将坐标设置到隐藏的 input 中
+                $('#longitude').val(lng);
+                $('#latitude').val(lat);
+
+                // 添加或移动标记点
+                if (marker) {
+                    marker.setPosition([lng, lat]);
+                } else {
+                    marker = new AMap.Marker({
+                        position: [lng, lat],
+                        map: map
+                    });
+                }
+            });
+            // --- 【新增】图片文件校验逻辑 ---
+            // 当用户选择文件后立即触发
+            $('#image').on('change', function () {
+                const file = this.files[0];
+                if (!file) return;
+
+                // 1. 格式校验
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('文件类型不支持！\n请上传 JPG, PNG, 或 GIF 格式的图片。');
+                    $(this).val(''); // 清空不合规的文件选择
+                    return;
+                }
+
+                // 2. 大小校验 (5MB)
+                const maxSize = 5 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    alert('图片大小不能超过5MB！');
+                    $(this).val(''); // 清空不合规的文件选择
+                    return;
+                }
+            });
+
+            // --- 修改表单提交逻辑，增加前端校验 ---
+            $('#publish-form').submit(function (event) {
+                event.preventDefault(); // 阻止表单默认提交行为
+
+                // --- 前端校验开始 ---
+                const title = $('#title').val().trim();
+                const description = $('#description').val().trim(); // 【新增】获取描述内容
+                let locationText = $('#location').val().trim();
+                const latitude = $('#latitude').val();
+                let longitude = $('#longitude').val();
+
+                const contact = $('#contact').val().trim();
+                const emailRegex = /^\S+@\S+\.\S+$/; // 简单的邮箱格式正则
+
+                if (!title) {
+                    alert('物品名称不能为空！');
+                    return;
+                }
+                if (title.length > 50) {
+                    alert('物品名称不能超过50个字符！');
+                    return;
+                }
+                // 【新增】校验描述
+                if (!description) {
+                    alert('详细描述不能为空！');
+                    return;
+                }
+                if (latitude && longitude) {
+                    // 如果用户在地图上选了点，我们就优先使用坐标
+                    // 并清空文本描述，避免后端混淆
+                    $('#location').val('');
+                    locationText = '';
+                }
+                if (!locationText && !latitude) {
+                    alert('请提供地点描述或在地图上选点！！');
+                    return;
+                }
+                if (!contact) {
+                    alert('联系邮箱不能为空！');
+                    return;
+                }
+                if (!emailRegex.test(contact)) {
+                    alert('请输入一个有效的邮箱地址！');
+                    return;
+                }
+                // --- 前端校验结束 ---
+                // 将AJAX请求封装成一个函数，避免代码重复
+                function submitForm(formData) {
+                    // 通过校验后，才发送AJAX请求
+                    $.ajax({
+                        url: API_BASE_URL + '/api/items/',
+                        type: 'POST',
+                        headers: { 'Authorization': 'Token ' + token },
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function (res) {
+                            // 'res' 就是后端返回的新创建的物品对象，包含它的ID
+                            const newItemId = res.id;
+                            // res 是新创建的物品对象，包含 id 和 type
+                            const itemType = res.type;
+                            if (newItemId) {
+                                // 发布成功后，跳转到匹配结果页，并通过URL参数传递新物品的ID
+                                alert('发布成功！正在为您查找匹配信息...');
+                                window.location.href = `match-results.html?id=${res.id}&source=publish&type=${itemType}`;
+                            } else {
+                                // 如果后端没返回ID，作为备用方案，跳回首页
+                                alert('发布成功！');
+                                window.location.href = 'index.html';
+                            }
+                        },
+                        error: function (xhr) {
+                            // ... 详细的后端错误处理逻辑保持不变 ...
+                            if (xhr.status === 401 || xhr.status === 403) {
+                                alert('身份认证失败或已过期，请重新登录！');
+                                window.location.href = 'login.html';
+                                return;
+                            }
+                            let errorMsg = '发布失败！\n';
+                            if (xhr.status === 400 && xhr.responseJSON) {
+                                const errors = xhr.responseJSON;
+                                for (const field in errors) {
+                                    errorMsg += `\n- ${field}: ${errors[field][0]}`;
+                                }
+                            } else {
+                                errorMsg += '未知错误，请联系管理员。';
+                            }
+                            alert(errorMsg.trim());
+                        }
+                    });
+                }
+                // 如果用户同时提供了两种位置信息，我们优先使用地图坐标
+                if (latitude) {
+                    // 创建一个新的 FormData 对象来提交，而不是修改原始表单
+                    // 这样可以避免在页面上看到 location 被清空
+                    const submissionData = new FormData(this);
+                    submissionData.set('location', ''); // 在要提交的数据中清空location
+                    submitForm(submissionData);
+                } else {
+                    submitForm(new FormData(this));
+                }
+
+            });
+        });
+    </script>
+</body>
+
+</html>

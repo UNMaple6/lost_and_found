@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>匹配结果 - 校园失物招领</title>
+    <link href="https://bootswatch.com/5/quartz/bootstrap.css" rel="stylesheet">
+    <script src="/static/js/config.js"></script>
+</head>
+
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">返回首页</a>
+            <a href="personal-center.html" class="btn btn-info ms-auto">前往个人中心</a>
+        </div>
+    </nav>
+
+    <!-- 主内容区域，添加了 id -->
+    <div class="container mt-4" id="main-container">
+        <div id="publish-success-alert" style="display: none;">
+            <div class="text-center mb-4">
+                <h2 class="text-success">🎉 发布成功！</h2>
+                <p class="lead">我们为您找到了以下可能相关的物品信息：</p>
+            </div>
+        </div>
+
+        <!-- 区域1：展示你刚刚发布的物品 -->
+        <div class="mb-5">
+            <h4>您发布的物品：</h4>
+            <div id="my-published-item">
+                <p class="text-center">正在加载您发布的物品...</p>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- 区域2：展示匹配到的物品列表 -->
+        <div id="match-section">
+            <h4>为您匹配到的信息：</h4>
+            <div id="matched-item-list" class="row">
+                <p id="match-loading-status" class="text-center">正在查找匹配信息...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 JS 库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('请先登录！');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const newItemId = urlParams.get('id');
+            const source = urlParams.get('source');
+            const itemType = urlParams.get('type');
+
+            if (!newItemId) {
+                alert('错误：未找到物品ID。');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            if (source === 'publish') {
+                $('#publish-success-alert').show();
+            }
+
+            // 🧩 模块化：友好提示框插入函数
+            function showFriendlyAlert(friendlyAlertHtml) {
+                $('#no-match-result-alert').remove();
+                $('#main-container').prepend(`
+                    <div id="no-match-result-alert">
+                        ${friendlyAlertHtml}
+                        <div class="text-center mt-3">
+                            <a href="index.html" class="btn btn-primary">返回首页</a>
+                            <a href="personal-center.html" class="btn btn-secondary mx-2">查看我发布的物品</a>
+                        </div>
+                    </div>
+                `);
+            }
+
+            // 🧩 加载单个物品信息
+            function loadSingleItem(itemId, containerId) {
+                $.ajax({
+                    url: `${API_BASE_URL}/api/items/${itemId}/`,
+                    type: 'GET',
+                    headers: { 'Authorization': 'Token ' + token },
+                    success: function (item) {
+                        const cardHtml = createItemCard(item, false);
+                        $(containerId).html(cardHtml);
+                    },
+                    error: function () {
+                        $(containerId).html('<p class="text-danger">加载物品详情失败。</p>');
+                    }
+                });
+            }
+
+            // 🧩 加载匹配结果
+            function loadMatches(itemId) {
+                $.ajax({
+                    url: `${API_BASE_URL}/api/items/${itemId}/matches/`,
+                    type: 'GET',
+                    headers: { 'Authorization': 'Token ' + token },
+                    success: function (matches) {
+                        $('#match-loading-status').hide();
+                        const matchList = $('#matched-item-list');
+                        matchList.empty();
+
+                        if (!matches || matches.length === 0) {
+                            $('#match-section').hide();
+
+                            let friendlyAlertHtml = '';
+                            if (source === 'publish' && itemType === 'LOST') {
+                                friendlyAlertHtml = `
+                                <div class="alert alert-info text-center" role="alert">
+                                    <h4 class="alert-heading">您的失物信息已成功发布！</h4>
+                                    <p>我们暂时没有找到相关的拾物信息。</p>
+                                    <p class="mb-0">当有新的匹配信息时，我们会通过邮件通知您，请耐心等待。</p>
+                                </div>`;
+                            } else if (source === 'publish' && itemType === 'FOUND') {
+                                friendlyAlertHtml = `
+                                <div class="alert alert-success text-center" role="alert">
+                                    <h4 class="alert-heading">感谢您的拾金不昧，信息已发布！</h4>
+                                    <p>目前还没有人发布丢失此物品的信息。</p>
+                                    <p class="mb-0">失主现在可以通过平台看到您发布的信息了，请耐心等待联系。</p>
+                                </div>`;
+                            } else {
+                                // 个人中心中手动查看，无匹配
+                                matchList.html('<p class="text-center text-muted col-12">暂时没有找到与此物品相关的匹配信息。</p>');
+                                $('#match-section').show();
+                                $('#my-published-item').closest('div').hide();
+                                return;
+                            }
+
+                            showFriendlyAlert(friendlyAlertHtml);
+                            $('#my-published-item').closest('div').hide();
+                        } else {
+                            matches.forEach(item => {
+                                matchList.append(createItemCard(item, false));
+                            });
+                        }
+                    },
+                    error: function () {
+                        $('#match-loading-status').text('加载匹配信息失败。').addClass('text-danger');
+                    }
+                });
+            }
+
+            // 🧩 卡片渲染函数
+            function createItemCard(item, showAdminButtons) {
+                const itemType = item.type || 'UNKNOWN';
+                const cardClass = itemType.toUpperCase() === 'LOST' ? 'border-danger' : 'border-success';
+                const titlePrefix = itemType.toUpperCase() === 'LOST' ? '【失物】' : '【拾物】';
+                const imageHtml = item.image_url ? `<img src="${item.image_url}" class="card-img-top" alt="${item.title}" style="max-height: 200px; object-fit: cover;">` : '';
+
+                let buttonsHtml = '';
+                if (showAdminButtons) {
+                    buttonsHtml = `
+                    <div class="card-footer bg-transparent">
+                        <a href="item-detail.html?id=${item.id}" class="btn btn-outline-light btn-sm">查看详情</a>
+                        <button class="btn btn-primary btn-sm edit-btn" data-id="${item.id}">编辑</button>
+                        <button class="btn btn-danger btn-sm delete-btn" data-id="${item.id}">删除</button>
+                    </div>`;
+                }
+
+                return `
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 ${cardClass}">
+                        ${imageHtml}
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">
+                                <span class="badge bg-secondary me-2">${item.item_class || '其他'}</span>
+                                ${titlePrefix} ${item.title}
+                            </h5>
+                            <p class="card-text"><strong>描述：</strong>${item.description || '无'}</p>
+                            <p class="card-text"><small class="text-muted"><strong>地点：</strong>${item.location}</small></p>
+                            ${item.time ? `<p class="card-text"><small class="text-muted"><strong>日期：</strong>${item.time}</small></p>` : ''}
+                            <p class="card-text mt-auto"><strong>联系方式：</strong><span class="badge bg-info">${item.contact}</span></p>
+                        </div>
+                        ${showAdminButtons ? buttonsHtml : `
+                        <div class="card-footer">
+                            <small class="text-muted">发布于: ${new Date(item.created_at).toLocaleString()}</small>
+                        </div>`}
+                    </div>
+                </div>`;
+            }
+
+            // 🔄 初始化：加载物品和匹配
+            loadSingleItem(newItemId, '#my-published-item');
+            loadMatches(newItemId);
+        });
+    </script>
+</body>
+
+</html>

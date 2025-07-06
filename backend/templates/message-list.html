@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>我的消息 - 校园失物招领</title>
+    <link href="https://bootswatch.com/5/quartz/bootstrap.css" rel="stylesheet">
+    <script src="/static/js/config.js"></script>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">返回首页</a>
+            <a href="personal-center.html" class="btn btn-info ms-auto">返回个人中心</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2 class="mb-4">我的消息列表</h2>
+        <div id="chat-room-list" class="list-group">
+            <p id="loading-rooms" class="text-center text-muted">正在加载消息列表...</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('请先登录！');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // --- 核心函数：加载并渲染聊天室列表 ---
+            function loadMyChatRooms() {
+                // 在函数开始时打印trace，用于调试是否被重复调用
+                console.trace("loadMyChatRooms() is called.");
+
+                $.ajax({
+                    url: API_BASE_URL + '/api/rooms/',
+                    type: 'GET',
+                    headers: { 'Authorization': 'Token ' + token },
+                    success: function (response) {
+                        const roomListDiv = $('#chat-room-list');
+                        $('#loading-rooms').hide();
+                        roomListDiv.empty(); // 关键：渲染前先清空
+
+                        const rooms = response.results || response; // 兼容分页和非分页
+
+                        if (rooms && rooms.length > 0) {
+                            // 使用Set来跟踪已经显示过的聊天对象，避免重复显示
+                            const displayedUsers = new Set();
+                            
+                            rooms.forEach(function (room) {
+                                // 【已修复】拼写错误 room.other_participant
+                                const otherUser = room.other_participant;
+                                if (!otherUser) {
+                                    console.log('跳过无效房间:', room);
+                                    return; // 跳过无效房间
+                                }
+                                
+                                const otherUsername = otherUser.username;
+                                if (displayedUsers.has(otherUsername)) {
+                                    console.log(`跳过重复的聊天对象: ${otherUsername}`);
+                                    return; // 跳过重复的聊天对象
+                                }
+                                
+                                // 记录这个用户已经显示过
+                                displayedUsers.add(otherUsername);
+                                
+                                const lastMsg = room.last_message;
+                                const unreadBadge = room.unread_count > 0 ? `<span class="badge bg-danger rounded-pill me-2">${room.unread_count}</span>` : '';
+                                const lastMsgPreview = lastMsg ? `<small class="text-muted d-block text-truncate">${lastMsg.content}</small>` : '<small class="text-muted d-block">暂无消息</small>';
+
+                                // 【新增】手动标记已读按钮的HTML
+                                const markReadButton = room.unread_count > 0 ? `<button class="btn btn-outline-secondary btn-sm mark-read-btn" data-room-name="${room.name}">标为已读</button>` : '';
+
+                                // 【优化】HTML结构，将所有内容包裹在<a>标签内
+                                const roomHtml = `
+                                    <a href="chat.html?room=${room.name}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                        <div class="flex-grow-1 me-3">
+                                            <h6 class="mb-1">与 ${otherUsername || '未知用户'} 的对话</h6>
+                                            ${lastMsgPreview}
+                                        </div>
+                                        <div class="d-flex align-items-center flex-shrink-0">
+                                            ${unreadBadge}
+                                            ${markReadButton}
+                                        </div>
+                                    </a>
+                                `;
+                                roomListDiv.append(roomHtml);
+                            });
+                        } else {
+                            roomListDiv.html('<p class="text-muted text-center">您还没有任何对话。</p>');
+                        }
+                    },
+                    error: function () {
+                        $('#loading-rooms').text('加载消息列表失败。').addClass('text-danger');
+                    }
+                });
+            }
+
+            // --- 事件委托：处理“标记已读”按钮的点击事件 ---
+            $('#chat-room-list').on('click', '.mark-read-btn', function (e) {
+                e.preventDefault();  // 阻止<a>标签的默认跳转
+                e.stopPropagation(); // 阻止事件冒泡到<a>标签
+
+                const roomNameToMark = $(this).data('room-name');
+                const button = $(this);
+                button.prop('disabled', true).text('处理中...'); // 增加用户反馈
+
+                $.ajax({
+                    url: `${API_BASE_URL}/api/rooms/${roomNameToMark}/mark_as_read/`, // 调用后端API
+                    type: 'POST',
+                    headers: { 'Authorization': 'Token ' + token },
+                    success: function () {
+                        // 直接更新UI，而不是重新加载整个列表
+                        console.log(`房间 ${roomNameToMark} 标记已读成功，更新UI...`);
+                        // 移除当前按钮和未读标记
+                        button.closest("a").find(".badge").remove();
+                        button.remove();
+                        // 不重新调用loadMyChatRooms，避免重复加载
+                    },
+                    error: function () {
+                        alert('标记已读失败，请稍后重试。');
+                        button.prop('disabled', false).text('标为已读'); // 恢复按钮状态
+                    }
+                });
+            });
+
+            // --- 页面初始化 ---
+            // 只调用一次loadMyChatRooms
+            loadMyChatRooms();
+            
+            // 【调试信息】添加版本号和时间戳，便于区分加载
+            console.log("消息列表页面加载完成，版本：1.1，时间：" + new Date().toLocaleString());
+        });
+    </script>
+</body>
+
+</html>

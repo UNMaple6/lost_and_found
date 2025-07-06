@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - 校园失物招领</title>
+    <!-- 引入 Bootstrap CSS -->
+    <link href="https://bootswatch.com/5/quartz/bootstrap.css" rel="stylesheet">
+    <!-- 引入全局配置文件 -->
+    <script src="/static/js/config.js"></script>
+    <style>
+        /* 给按钮之间增加一点间距 */
+        .card-footer .btn {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">返回首页</a>
+            <!-- ↓↓↓↓↓ 新增一个容器，用于动态填充导航栏右侧内容 ↓↓↓↓↓ -->
+            <div id="nav-user-status" class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                <!-- JS会填充这里 -->
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主体内容 -->
+    <div class="container mt-4">
+        <h2 class="mb-4">我发布的物品</h2>
+
+        <!-- 我发布的物品列表容器 -->
+        <div class="row" id="my-item-list">
+            <!-- JS将在此处动态生成我发布的物品卡片 -->
+            <!-- 初始加载提示 -->
+            <p id="loading-status" class="text-center">正在加载您的物品...</p>
+        </div>
+
+    </div>
+
+    <!-- 编辑物品的模态框 (Modal) -->
+    <div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editItemModalLabel">编辑物品信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 编辑表单, 结构与 publish.html 类似 -->
+                    <form id="edit-form">
+                        <!-- 隐藏的 input 用于存储当前编辑的物品ID -->
+                        <input type="hidden" id="edit-item-id">
+
+                        <div class="form-group mb-3">
+                            <label for="edit-title" class="form-label">物品名称</label>
+                            <input type="text" class="form-control" id="edit-title" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="edit-item_class" class="form-label">物品类别</label>
+                            <select class="form-select" id="edit-item_class" required>
+                                <option value="电子产品">电子产品</option>
+                                <option value="证件卡片">证件卡片</option>
+                                <option value="学习用品">学习用品</option>
+                                <option value="生活用品">生活用品</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="edit-description" class="form-label">详细描述</label>
+                            <textarea class="form-control" id="edit-description" rows="3"></textarea>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="edit-location" class="form-label">地点</label>
+                            <input type="text" class="form-control" id="edit-location" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="edit-time" class="form-label">丢失/拾获日期</label>
+                            <input type="date" class="form-control" id="edit-time">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="save-changes-btn">保存修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <!-- 引入本页面的专属JS -->
+    <script src="/static/js/personal-center.js"></script>
+</body>
+
+</html>

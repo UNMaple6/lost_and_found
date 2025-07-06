@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录/注册 - 校园失物招领</title>
+    <!-- 引入 Quartz Bootstrap 主题 CSS -->
+    <link href="https://bootswatch.com/5/quartz/bootstrap.css" rel="stylesheet">
+    <!-- 引入全局配置文件，确保它在其他脚本之前加载 -->
+    <script src="/static/js/config.js"></script>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <h2 class="text-center mb-4">校园失物招领平台</h2>
+                <!-- 登录表单 -->
+                <div id="login-form">
+                    <h3 class="mt-4">登录</h3>
+                    <div class="form-group mb-3">
+                        <label for="login-username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="login-username" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="login-password" class="form-label">密码</label>
+                        <input type="password" class="form-control" id="login-password" placeholder="请输入密码">
+                    </div>
+                    <button id="login-btn" class="btn btn-primary w-100">登录</button>
+                    <p class="mt-2 text-center">还没有账号？ <a href="#" id="show-register">立即注册</a></p>
+                </div>
+
+                <!-- 注册表单 (默认隐藏) -->
+                <div id="register-form" style="display: none;">
+                    <h3 class="mt-4">注册</h3>
+                    <div class="form-group mb-3">
+                        <label for="register-username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="register-username" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="register-password" class="form-label">密码</label>
+                        <input type="password" class="form-control" id="register-password" placeholder="请输入密码">
+                    </div>
+                    <button id="register-btn" class="btn btn-success w-100">注册</button>
+                    <p class="mt-2 text-center">已有账号？ <a href="#" id="show-login">返回登录</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 jQuery 和 Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            // API_BASE_URL 来自 config.js
+
+            // --- 交互功能：切换登录和注册表单 ---
+            $('#show-register').click(function (e) {
+                e.preventDefault();
+                $('#login-form').hide();
+                $('#register-form').show();
+            });
+
+            $('#show-login').click(function (e) {
+                e.preventDefault();
+                $('#register-form').hide();
+                $('#login-form').show();
+            });
+
+            // --- API功能：处理注册 (已添加前端校验) ---
+            $('#register-btn').click(function () {
+                const username = $('#register-username').val().trim();
+                const password = $('#register-password').val();
+
+                // --- 前端校验开始 ---
+                const usernameRegex = /^[a-zA-Z0-9]{4,15}$/; // 仅限字母数字，4-15位
+                if (!usernameRegex.test(username)) {
+                    alert('用户名格式不正确！\n\n- 长度需在4到15个字符之间\n- 只能包含英文字母和数字');
+                    return; // 阻止提交
+                }
+
+                if (password.length < 6 || password.length > 20) {
+                    alert('密码长度不符合要求！\n\n- 长度需在6到20个字符之间');
+                    return; // 阻止提交
+                }
+                // --- 前端校验结束 ---
+
+                // 通过校验后，才发送AJAX请求
+                $.ajax({
+                    url: API_BASE_URL + '/api/register/',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ username: username, password: password }),
+                    success: function (res) {
+                        alert('注册成功！请登录。');
+                        // --- 【优化】自动填充用户名 ---
+                        const registeredUsername = $('#register-username').val().trim();
+                        $('#login-username').val(registeredUsername); // 将注册的用户名填入登录框
+                        $('#login-password').focus(); // 将光标自动定位到密码输入框
+
+                        $('#show-login').click(); // 切换回登录表单
+                    },
+                    error: function (xhr) {
+                        // 这里处理后端返回的错误，例如“用户名已存在”
+                        let errorMsg = '注册失败：\n';
+                        if (xhr.responseJSON) {
+                            for (const key in xhr.responseJSON) {
+                                errorMsg += `- ${xhr.responseJSON[key]}\n`;
+                            }
+                        } else {
+                            errorMsg += '未知错误，请联系管理员。';
+                        }
+                        alert(errorMsg.trim());
+                    }
+                });
+            });
+
+            // --- API功能：处理登录 (登录时通常不做复杂校验) ---
+            $('#login-btn').click(function () {
+                const username = $('#login-username').val();
+                const password = $('#login-password').val();
+
+                if (!username || !password) {
+                    alert('用户名和密码不能为空！');
+                    return;
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/api/login/',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ username: username, password: password }),
+                    success: function (res) {
+                        // ... 登录成功逻辑保持不变 ...
+                        console.log("登录成功，后端返回的数据:", res);
+
+                        if (res && res.token && res.user && res.user.id) {
+
+                            localStorage.setItem('token', res.token);
+                            localStorage.setItem('userId', res.user.id); // <-- 必须存储userId
+                            localStorage.setItem('username', res.user.username); // 从 res 中获取，更可靠
+
+                            alert('登录成功！');
+                            window.location.href = 'index.html';
+
+                        } else {
+                            // 如果后端返回的数据格式不符合约定
+                            alert('登录失败：从服务器返回的数据格式不正确，缺少关键信息。');
+                            console.error("后端返回的数据不符合预期格式 {token: '...', user: {id: ..., username: ...}}", res);
+                        }
+                    },
+                    error: function (xhr) {
+                        let errorMsg = '登录失败！';
+
+                        // 尝试从后端返回的JSON中获取详细错误信息
+                        if (xhr.responseJSON && xhr.responseJSON.non_field_errors) {
+                            // DRF Token认证失败的标准错误格式
+                            errorMsg += '\n\n' + xhr.responseJSON.non_field_errors[0];
+                        } else if (xhr.responseJSON) {
+                            // 其他可能的JSON错误
+                            errorMsg += '\n\n' + JSON.stringify(xhr.responseJSON);
+                        } else if (xhr.status === 401) {
+                            // 如果没有JSON，但状态码是401，给一个通用的提示
+                            errorMsg += '\n\n用户名或密码不正确。';
+                        } else {
+                            // 其他网络错误
+                            errorMsg += '\n\n发生未知错误，请检查网络或联系管理员。';
+                        }
+
+                        alert(errorMsg);
+                    }
+                });
+
+            });
+        });
+    </script>
+</body>
+
+</html>

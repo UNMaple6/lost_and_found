@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天 - 校园失物招领</title>
+    <link href="https://bootswatch.com/5/quartz/bootstrap.css" rel="stylesheet">
+    <script src="/static/js/config.js"></script>
+    <!-- 【新增】本页面的专属CSS -->
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            /* 防止整个页面滚动 */
+        }
+
+        .chat-container {
+            flex-grow: 1;
+            /* 占据剩余所有空间 */
+            overflow-y: auto;
+            /* 内部可以滚动 */
+            padding: 15px;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+            /* 允许长单词换行 */
+        }
+
+        .message-sent {
+            background-color: #0d6efd;
+            /* Bootstrap primary color */
+            color: white;
+            margin-left: auto;
+            /* 靠右对齐 */
+            border-bottom-right-radius: 5px;
+        }
+
+        .message-received {
+            background-color: #444;
+            /* 深色背景 */
+            color: white;
+            margin-right: auto;
+            /* 靠左对齐 */
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-meta {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .chat-input-area {
+            flex-shrink: 0;
+            /* 防止被压缩 */
+            padding: 15px;
+            border-top: 1px solid #444;
+            background-color: #222;
+            /* 深色背景 */
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary flex-shrink-0">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">返回首页</a>
+            <span id="chat-title" class="navbar-text ms-auto">正在加载...</span>
+        </div>
+    </nav>
+
+    <!-- 聊天记录容器 -->
+    <div class="chat-container" id="messages-container">
+        <!-- JS将在此处填充历史消息和新消息 -->
+        <p id="loading-history" class="text-center text-muted">正在加载历史消息...</p>
+    </div>
+
+    <!-- 输入区域 -->
+    <div class="chat-input-area">
+        <div class="input-group">
+            <input type="text" id="message-input" class="form-control" placeholder="输入消息...">
+            <button id="send-button" class="btn btn-primary">发送</button>
+        </div>
+    </div>
+
+    <!-- 引入JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <!-- 【必须】引入本页面的专属JS -->
+    <script src="/static/js/chat.js"></script>
+</body>
+
+</html>
